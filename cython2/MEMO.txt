@@ -1,0 +1,76 @@
+
+1.
+anacondaを使っているとビルドするときにトラブルが多かったので、
+シンプルなvenvかsystemのやつを使うのがいい。
+
+python3 -m venv venv
+source venv/bin/activate
+
+cythonをインストール
+pip install cython
+
+libをインストール C側で必要
+sudo apt install python3-dev
+
+2.
+cythonコードを書く。
+引数型を指定するような書き方に変えて、ファイル拡張子もpyxになる。
+
+ビルド用のファイルを書く
+setup.py
+
+pyxを指定してcythonizeする
+
+3.
+cythonをビルドする
+python3 setup.py build_ext --inplace
+
+成功すると、.soファイルが出てくる。
+
+まずはpython側で試してみる
+c化されたpythonコードをpythonから使うテスト
+python pycython.py
+
+4.
+cythonをCから呼び出すためのコードを書く
+call_add.c
+
+5.
+先のcall_add.cをビルドする
+
+これだけだと共有ライブラリの場所がうまいこと見つからなくてエラーになった
+gcc call_add.c -o call_add `python3-config --cflags --ldflags`
+
+共有ライブラリの場所を確認
+ls $(python3 -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))")/libpython*
+
+python3-config --cflags
+
+場所を明示的に指定してリンク
+gcc call_add.c -o call_add \\n  `python3-config --cflags` \\n  -L/usr/lib/x86_64-linux-gnu -lpython3.10 \\n  -Wl,-rpath,/usr/lib/x86_64-linux-gnu\n
+./call_add
+
+gcc call_add.c -o call_add \
+  `python3-config --cflags` \
+  -L/usr/lib/x86_64-linux-gnu -lpython3.10 \
+  -Wl,-rpath,/usr/lib/x86_64-linux-gnu
+
+
+
+こんなのが出たら、
+
+> ./call_add
+ModuleNotFoundError: No module named 'add'
+
+
+Py_Initialize();
+
+// sys.path.append(".")
+PyObject *sys_path = PySys_GetObject("path");
+PyObject *path = PyUnicode_FromString(".");
+PyList_Append(sys_path, path);
+Py_DECREF(path);
+
+こういう感じにライブラリの場所を指定してやる
+
+
