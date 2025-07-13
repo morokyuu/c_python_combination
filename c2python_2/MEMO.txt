@@ -1,0 +1,6 @@
+
+python function call from c.
+
+using system func. subprocess
+
+
